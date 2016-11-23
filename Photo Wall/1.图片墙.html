@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title></title>
+		<style>
+			body {
+				margin: 0;
+			}
+			ul {
+				margin: 0;
+				padding: 0;
+				list-style: none;
+			}
+			.clearfix:after {
+				content: "";
+				display: block;
+				clear: both;
+			}
+			.clearfix {
+				zoom: 1;
+			}
+			#div {
+				width: 780px;
+				margin: 50px auto;
+			}
+			#div #list {
+				width: 780px;
+				height: 500px;
+				margin-top: 10px;
+				border: 1px solid #000;
+				overflow: hidden;
+				position: relative;
+				
+			}
+			#list li {
+				float: left;
+				margin: 10px;
+				width: 240px;
+				height: 135px;
+				z-index: 1;
+			}
+			.active {
+				border: 2px solid #00FFFF;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="div">
+			<input type="button" value="随机排序" id="btn"/>
+			<ul id="list">
+				<li><img src="img/1.jpg"/></li>
+				<li><img src="img/2.jpg"/></li>
+				<li><img src="img/3.jpg"/></li>
+				<li><img src="img/4.jpg"/></li>
+				<li><img src="img/5.jpg"/></li>
+				<li><img src="img/6.jpg"/></li>
+				<li><img src="img/7.jpg"/></li>
+				<li><img src="img/8.jpg"/></li>
+				<li><img src="img/9.jpg"/></li>
+			</ul>
+		</div>
+		<script>
+			(function() {
+				var list = document.getElementById("list");
+				var lis = list.children;
+				var aPos = []; // 用来存放位置
+				var zIndex = 1;
+				var btn = document.getElementById("btn");
+				
+				//布局转换
+				for(var i = 0; i < lis.length; i++) {
+					aPos[i] = { // 向数组中存放位置
+						left: lis[i].offsetLeft,
+						top: lis[i].offsetTop
+					}
+					
+					// 把原来的位置改为定位的位置
+					lis[i].style.left = lis[i].offsetLeft + 'px';
+					lis[i].style.top = lis[i].offsetTop + 'px';
+					lis[i].style.zIndex = 1;
+				}
+				
+				for(var i= 0; i < lis.length; i++) {
+					lis[i].style.position = 'absolute';
+					lis[i].style.margin = 0;
+					lis[i].index = i;// 定义索引值
+					drag(lis[i]);
+				}
+				
+				// 点击按钮随机调换位置
+				btn.addEventListener('click',fnClick);
+				function fnClick() {
+					aPos.sort(function(){
+						return .5 - Math.random();
+					});
+					
+					for(var i= 0; i< lis.length; i++) {
+						lis[i].style.transition = '.5s';
+			lis[i].style.left = aPos[i].left + 'px';
+			lis[i].style.top = aPos[i].top + 'px';
+						
+						// 随机之后，将所有的index重置，要不会错位
+						lis[i].index = i;
+					}
+				}
+				
+				// 拖拽
+				function drag(obj) {
+					var disX = 0,
+						disY = 0;
+					var arr = [],//为了记录有几个被碰撞
+					objIndex = null; // 用来记录被碰撞的元素
+					
+					obj.addEventListener('mousedown',fnDown);
+					function fnDown(ev) {
+						// 当点击的时候，把所有的transition 清掉
+						for(var i = 0; i < lis.length; i++) {
+							lis[i].style.transition = "";
+						}
+						
+						//当按下当前的li的时候，将zIndex++,再把这个值付给当前的这个li,保证每次的zIndex都是最大的；
+						obj.style.zIndex = ++zIndex;
+						
+						
+						disX = ev.pageX - obj.offsetLeft;
+						disY = ev.pageY - obj.offsetTop;
+						
+						document.addEventListener('mousemove',fnMove);
+						document.addEventListener('mouseup',fnUp);
+						
+						ev.preventDefault();
+					}
+					
+					function fnMove(ev) {
+							var max = Infinity; // 定义一个最大值，用来与被碰撞的元素比较
+							var objIndex2 = null; // 用来记录碰撞元素中离得最近的一个
+							
+							obj.style.left = ev.pageX - disX + "px";
+							obj.style.top = ev.pageY - disY + "px";
+							
+							arr.length = 0;
+							
+							for(var i = 0; i < lis.length; i++) {
+								if(Duang(obj,lis[i])) { // 如果发生碰撞了
+									if(obj != (lis[i])) { // 并且碰撞的不是它本身
+										arr.push(lis[i]); // 把碰撞到的元素放到数组中
+									}
+								}
+							}
+							
+							arr.forEach(function(item,i) { // 循环数组中的每一位
+								var a = item.offsetTop - obj.offsetTop; // 求出移动元素预碰撞元素的差距，横坐标和纵坐标
+								var b = item.offsetLeft - obj.offsetLeft;
+								
+								/*
+									Math.sqrt 开根号
+									Math.pow 幂
+									
+									c = Math.sqrt(a*a + b*b)
+								
+								*/
+								
+								var sqrt = Math.sqrt(Math.pow(a,2) + Math.pow(b,2));
+								
+								// 求出的c 值，与max比较，比max小，就把值赋给max
+								if(max > sqrt) {
+									max = sqrt;
+									objIndex2 = item;
+								}
+								
+							});
+							
+							// 将之前碰撞的className 清空
+							if(objIndex) {
+								objIndex.className = "";
+							}
+							if(objIndex2) { // 如果有碰撞的最小的元素
+								objIndex2.className = "active";
+							}
+							
+							// 把当前的最小的赋值给objIndex
+							objIndex = objIndex2;
+							
+						}
+						function fnUp() {
+							// up 时交换位置
+							// 如果有最近
+							if(objIndex) {
+								//把当前拖拽的元素 和 被碰撞的元素加上transition
+								obj.style.transition = objIndex.style.transition = '.5s';
+								
+								// 互换位置
+								obj.style.left = aPos[objIndex.index].left + "px";
+								obj.style.top = aPos[objIndex.index].top + "px";
+								
+								objIndex.style.left = aPos[obj.index].left + "px";
+								objIndex.style.top = aPos[obj.index].top + "px";
+								
+								// 交换完位置之后还要把索引值调换
+								var newIndex = objIndex.index;
+								objIndex.index = obj.index;
+								obj.index = newIndex;
+								
+								// 当运动结束之后，把被碰撞的元素的class名清空
+								objIndex.timer = setTimeout(function(){
+									objIndex.className = "";
+									clearTimeout(objIndex.timer);
+								},501);
+								
+							} else { // 没有发生碰撞，回到原位
+								obj.style.transition = '.5s';
+								obj.style.left = aPos[obj.index].left + "px";
+								obj.style.top = aPos[obj.index].top + "px";
+							}
+							
+							document.removeEventListener('mousemove',fnMove);
+							document.removeEventListener('mouseup',fnUp);
+						}
+					}
+				
+				function Duang(obj,obj2) {
+					var l1 = obj.offsetLeft;
+					var t1 = obj.offsetTop;
+					var r1 = l1 + obj.offsetWidth;
+					var b1 = t1 + obj.offsetHeight;
+					
+					var l2 = obj2.offsetLeft;
+					var t2 = obj2.offsetTop;
+					var r2 = l2 + obj.offsetWidth;
+					var b2 = t2 + obj.offsetHeight;
+					
+					if(r1 < l2 || b1 < t2 || l1 > r2 || t1 > b2) {
+						return false;
+					} else {
+						return true;
+					}
+					
+				}
+			})();
+		</script>
+	</body>
+</html>
